@@ -1,7 +1,6 @@
 package com.example.redbuttonapp
 
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -51,26 +50,28 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ButtonRoute() {
-    var minutes by rememberSaveable { mutableIntStateOf(30) }
-    var deadline by rememberSaveable { mutableLongStateOf(0L) }
-    var remaining by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(deadline) {
-        if (deadline == 0L) remaining = 0L
-        else {
-            do {
-                remaining = (deadline - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
-                if (remaining > 0L) delay(200L)
-            } while (remaining > 0L)
-            deadline = 0L
+    val context = LocalContext.current
+    val store = remember { TimerStore(context.applicationContext) }
+    var state by remember { mutableStateOf(store.read()) }
+    DisposableEffect(store) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            state = store.read()
+        }
+        store.preferences.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { store.preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    LaunchedEffect(store) {
+        while (true) {
+            val next = store.read()
+            if (state.active && !next.active) RedButtonWidget.updateAll(context)
+            state = next
+            delay(200L)
         }
     }
-    ButtonScreen(minutes, deadline != 0L, remaining,
-        onMinutesChange = { minutes = it },
-        onActivate = {
-            remaining = minutes * 60_000L
-            deadline = SystemClock.elapsedRealtime() + remaining
-        },
-        onReset = { deadline = 0L })
+    ButtonScreen(state.minutes, state.active, state.remaining,
+        onMinutesChange = { store.selectMinutes(it); state = store.read() },
+        onActivate = { store.activate(); state = store.read() },
+        onReset = { store.reset(); state = store.read() })
 }
 
 @Composable

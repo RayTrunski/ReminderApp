@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">RedButtonApp</string>
+    <string name="widget_name">RED BUTTON</string>
+    <string name="widget_description">Activa un intervalo desde tu pantalla de inicio.</string>
+    <string name="widget_activate">ACTIVAR</string>
+    <string name="widget_active">ACTIVO</string>
+    <string name="widget_reset">Restablecer intervalo</string>
+    <string name="widget_open_app">Abrir Red Button</string>
+    <string name="widget_minutes">%1$d min</string>
 </resources>
